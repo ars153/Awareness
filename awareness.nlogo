@@ -29,15 +29,17 @@ breed [infecteds infected]
 breed [removeds removed]
 breed [the-dead dead]
 
-susceptibles-own [to-become-infected?]
+susceptibles-own [to-become-infected?
+                  p-infect]
 
 
 infecteds-own [to-remove?
                to-die?
-               time-left]
+               time-left
+               i-modified-contact?]
 
-turtles-own [z-infection
-             p-infect]
+turtles-own [contact-chance
+             modified-contact?]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup procedures
@@ -70,24 +72,25 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 to setup-turtles
   set-default-shape turtles "person"
+
   ask patches
-     [
-       set pcolor white
+     [set pcolor white]
 
-        let p random 1000 + 1 ;; Will be used in the coin toss to determine whether a turtle will be created
+  ask n-of (density * count patches) patches[
 
-        if density * 1000 >= p [
-        sprout-susceptibles 1
+          sprout-susceptibles 1
           [set color green
-           set z-infection z-infection-init
+           set contact-chance default-contact-chance
            set to-become-infected? false
+           set modified-contact? false
            set p-infect p-infect-init]
-    ]
-  ]
+        ]
+
    ask n-of initial-inf turtles
      [
        set breed infecteds
        set color red
+       set i-modified-contact? false
        set time-left (countdown - 2 + random (countdown / 5)) ;; The infected will have between 80% and 120% of the value countdown before they die or recover
      ]
 end
@@ -140,28 +143,30 @@ to count-contacts
   let RR 0
 
   ask susceptibles [
-    set SI (SI + ((count infecteds in-radius z-infection with [z-infection >= distance myself]) * (p-infect / p-infect-init)))
-    set SR (SR + ((count removeds in-radius z-infection with [z-infection >= distance myself]) * (p-infect / p-infect-init)))
-    set SS (SS + ((count other susceptibles in-radius z-infection with [z-infection >= distance myself]) * (p-infect / p-infect-init)))
+    set SI (SI + ((count infecteds in-radius z-infection-init) * (p-infect / p-infect-init)))
+    set SR (SR + ((count removeds in-radius z-infection-init) * (p-infect / p-infect-init)))
+    set SS (SS + ((count other susceptibles in-radius z-infection-init) * (p-infect / p-infect-init)))
+    set SS (SS / 2)
+    set SI round (SI * contact-chance)
+    set SR round (SR * contact-chance)
+    set SS round (SS * contact-chance)
   ]
-  set SS (SS / 2)
-  set SI round (SI * contact-chance)
-  set SR round (SR * contact-chance)
-  set SS round (SS * contact-chance)
+
 
   ask infecteds [
-    set IR round (IR + (count removeds in-radius z-infection-init with [z-infection >= distance myself]))
-    set II round (II + (count other infecteds in-radius z-infection-init with [z-infection >= distance myself]))
+    set IR round (IR + (count removeds in-radius z-infection-init))
+    set II round (II + (count other infecteds in-radius z-infection-init))
+    set II (II / 2)
+    set IR (IR * contact-chance)
+    set II (II * contact-chance)
   ]
-  set II (II / 2)
-  set IR (IR * contact-chance)
-  set II (II * contact-chance)
+
 
   ask removeds [
-    set RR round (RR + (count other removeds in-radius z-infection-init with [z-infection >= distance myself]))
+    set RR round (RR + (count other removeds in-radius z-infection-init))
+    set RR (RR / 2)
+    set RR (RR * contact-chance)
   ]
-  set RR (RR / 2)
-  set RR (RR * contact-chance)
 
   set SI-contacts (SI-contacts + SI)
   set SR-contacts (SR-contacts + SR)
@@ -187,7 +192,7 @@ to infect-susceptibles
    ask susceptibles [
 
      let infected-contacts                              ;; this is the number of infecteds contacted by this susceptible, and is the sum of
-        (count infecteds in-radius z-infection)         ;; the number of infecteds within the radius z-infection
+        (count infecteds in-radius z-infection-init)         ;; the number of infecteds within the radius z-infection
 
      set infected-contacts (infected-contacts * contact-chance)
 
@@ -210,7 +215,7 @@ to remove-infecteds
   ask infecteds with [time-left = 0] [ ;; Any infected whose time is up will either recover or die
     let recovery (random 1000) + 1 ;; Recovery chance
 
-    ifelse recovery <= p-remove * 1000 ;; If the infected recovers it is set to be removed, if not, it is set to be killed
+    ifelse recovery <= p-recover * 1000 ;; If the infected recovers it is set to be removed, if not, it is set to be killed
     [set to-remove? true]
     [set to-die? true]
   ]
@@ -227,6 +232,7 @@ to update-breeds
   ask susceptibles with [to-become-infected? = true][   ; infected susceptibles become infected
      set breed infecteds
      set color red
+     set i-modified-contact? false
      set time-left (countdown - 2 + random (countdown / 5))
   ]
 
@@ -247,86 +253,51 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Go procedure: modify contact
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Turtles sense infection pressure in awareness neighbourhood and modify contacts accordingly,
-;; conditioned by the current risk attitude. Calculation of infection pressure is based on
-;; either the number of infected or removed neighbours, or the number of infecteds only,
-;; depending on the switch aware-of-removeds?
-;;
-;; Modifying contacts is done in one/more of three ways depending on selected switches:
-;;    - Reduce/reinstate long-range contacts by making some links inactive/active
-;;    - Reduce/increase the order of the infection neighbourhood up to a maximum of z-infection-init
-;;    - Reduce/increase p-infect up to a maximum of p-infect-init
-;;
-;; There are lots of different possible ways to choose how to reduce contacts.
-;; I will reduce them in proportion to infection pressure, moderated by risk attitude.
-;; Examples: Assume the current infection-pressure is 0.5 (half of neighbours are infected)
-;;    Risk-attitude = 0 (extremely risk averse)
-;;         response-size will be 1, regardless of infection-pressure, so all contact will stop
-;;    Risk-attitude = 0.5 (somewhat risk averse)
-;;         response-size is about 0.7 (proportion of contact to drop > infection pressure)
-;;    Risk-attitude = 1 (risk neutral)
-;;         response-size = 0.5 (proportion of contact to drop equals infection pressure)
-;;    Risk-attitude = 2 (somewhat risk seeking)
-;;         response-size = 0.25 (proportion of contact to drop < infection pressure)
-;;    risk-attitude = 12 (very risk seeking)
-;;         response-size is about 0.0002 (on a 50x50 grid, no contacts will be droppped)
-;;
-;; Note that a link may be modified by the turtles at either of its ends
-;; and the changes made may be in conflict. The "winner" will be whichever turtle
-;; is randomly chosen second of the two.
-;;
-;; Question: should there be some probability associated with modifying contact?
-;; At the moment, the size of the response is deterministically fixed by the infection pressure
-;; and risk attitude. This could be made less deterministic.
-;;
+;; If social distancing is applied, a certain proportion of all turtles will reduce their contact chance when a threshold of affected people is reached
+;; Susceptibles will reduce their contacts to the default contact chance multiplied by sd-contact-modifier with some randomness
+;; The probability that a turtle will follow social distancing is sd-chance
+;; If social distancing, we only modify contacts of people who have not modified their contacts already
+;; Infected people will self isolate even before the threshold is reached if infected-isolation? is on, and the effects will be more severe than social distancing
+;; Infected people will reduce their contact chance to a value between 0 and 5 percent
+;; Susceptibles who follow social distancing are coloured cyan and infecteds who follow infected isolation are coloured pink
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 to modify-contact
 
-  if modify-z-infection? or modify-p-infect?  [
-    ask turtles [
+  ask turtles with [modified-contact? = false] [
+    if social-distancing? [
+      let been-infected count infecteds + count removeds + count the-dead ;; Total number of people who have been infected
 
-       let affecteds 0
-       ifelse aware-of-removeds?
-          [set affecteds (count turtles in-radius z-aware with [breed = infecteds or breed = removeds])]
-          [set affecteds (count infecteds in-radius z-aware)]
+      if been-infected > sd-threshold * count turtles [ ;; If the total number of victims is higher than the population threshold
+        let p random 1000 + 1 ;; This will be used in the coin toss to determine whether a turtle will comply with social distancing
 
-       if aware-of-dead?
-        [set affecteds (affecteds + count the-dead in-radius z-aware)]
+        if sd-chance * 1000 >= p [
+          set contact-chance (default-contact-chance * (sd-contact-modifier - 0.05 + random-float 0.1))
+          if breed = susceptibles [set color cyan]]
 
-       let infection-pressure affecteds / (count turtles in-radius z-aware) ;; proportion of affected turtles in awareness neighbourhood
-       let response-size infection-pressure ^ risk-attitude
-
-       if modify-z-infection? [
-          set z-infection (round (sqrt (1 - response-size) * z-infection-init))
-          ask susceptibles [ifelse (z-infection = z-infection-init) [set color green] [set color cyan]]
-       ]
-
-       if modify-p-infect? [
-          set p-infect (1 - response-size) * p-infect-init
-          ask susceptibles [ifelse (p-infect = p-infect-init) [set color green] [set color cyan]]
-       ]
-
-      if not infected-isolation? [ask infecteds [set z-infection z-infection-init]]
-      if not removed-isolation? [ask removeds [set z-infection z-infection-init]]
-
-      if social-distancing? [
-        let been-infected count infecteds + count removeds + count the-dead ;; Total number of people who have been infected
-
-        if been-infected > sd-threshold * count turtles [ ;; If the total number of victims is higher than the population threshold
-          let p random 1000 + 1 ;; This will be used in the coin toss to determine whether a turtle will comply with social distancing
-
-          if sd-chance * 1000 >= p [set z-infection 0]
+        set modified-contact? true
         ]
       ]
     ]
+
+  ask infecteds with [i-modified-contact? = false] [
+    if infected-isolation? [
+      let p random 1000 + 1 ;; This will be used in the coin toss to determine whether a turtle will comply with social distancing
+
+      if sd-chance * 1000 >= p [
+        set contact-chance (default-contact-chance * (random-float 0.05))
+        set color pink
+      ]
+
+      set i-modified-contact? true
+      ]
   ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-650
-21
-1258
-630
+490
+10
+1098
+619
 -1
 -1
 12.0
@@ -403,8 +374,8 @@ SLIDER
 145
 227
 178
-p-remove
-p-remove
+p-recover
+p-recover
 0.0
 1.0
 0.8
@@ -434,7 +405,7 @@ INPUTBOX
 79
 71
 max-ticks
-10000.0
+1.0
 1
 0
 Number
@@ -468,74 +439,11 @@ z-infection-init
 z-infection-init
 0
 71
-2.0
+1.0
 1
 1
 NIL
 HORIZONTAL
-
-SLIDER
-15
-243
-187
-276
-z-aware
-z-aware
-0
-71
-2.0
-1
-1
-NIL
-HORIZONTAL
-
-SWITCH
-471
-209
-633
-242
-modify-z-infection?
-modify-z-infection?
-1
-1
--1000
-
-SLIDER
-16
-286
-188
-319
-risk-attitude
-risk-attitude
-0
-12
-0.5
-0.1
-1
-NIL
-HORIZONTAL
-
-SWITCH
-470
-260
-616
-293
-modify-p-infect?
-modify-p-infect?
-0
-1
--1000
-
-SWITCH
-470
-161
-641
-194
-aware-of-removeds?
-aware-of-removeds?
-0
-1
--1000
 
 SLIDER
 88
@@ -546,28 +454,17 @@ countdown
 countdown
 1
 100
-10.0
+100.0
 1
 1
 NIL
 HORIZONTAL
 
-SWITCH
-474
-111
-618
-144
-aware-of-dead?
-aware-of-dead?
-1
-1
--1000
-
 SLIDER
-292
-56
-464
-89
+218
+197
+390
+230
 sd-threshold
 sd-threshold
 0
@@ -579,10 +476,10 @@ NIL
 HORIZONTAL
 
 SWITCH
-473
-60
-624
-93
+270
+99
+421
+132
 social-distancing?
 social-distancing?
 0
@@ -590,34 +487,23 @@ social-distancing?
 -1000
 
 SWITCH
-468
-311
-624
-344
+272
+54
+428
+87
 infected-isolation?
 infected-isolation?
-1
-1
--1000
-
-SWITCH
-473
-13
-632
-46
-removed-isolation?
-removed-isolation?
-1
+0
 1
 -1000
 
 SLIDER
-15
-330
-187
-363
-contact-chance
-contact-chance
+14
+242
+191
+275
+default-contact-chance
+default-contact-chance
 0
 1
 1.0
@@ -627,30 +513,45 @@ NIL
 HORIZONTAL
 
 SLIDER
-259
-103
-431
-136
+216
+244
+388
+277
 sd-chance
 sd-chance
 0
 1
-0.1
+1.0
 0.01
 1
 NIL
 HORIZONTAL
 
 SLIDER
-259
-150
-431
-183
+215
+290
+387
+323
 density
 density
 0
 1
 1.0
+0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+238
+153
+410
+186
+sd-contact-modifier
+sd-contact-modifier
+0.05
+1
+0.05
 0.01
 1
 NIL
