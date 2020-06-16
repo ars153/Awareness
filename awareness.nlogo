@@ -91,7 +91,7 @@ to setup-turtles
        set breed infecteds
        set color red
        set i-modified-contact? false
-       set time-left (countdown - 2 + random (countdown / 5)) ;; The infected will have between 80% and 120% of the value countdown before they die or recover
+       set time-left (post-infection-countdown - 2 + random (post-infection-countdown / 5)) ;; The infected will have between 80% and 120% of the value post-infection-countdown before they die or recover
      ]
 end
 
@@ -233,7 +233,7 @@ to update-breeds
      set breed infecteds
      set color red
      set i-modified-contact? false
-     set time-left (countdown - 2 + random (countdown / 5))
+     set time-left (post-infection-countdown - 2 + random (post-infection-countdown / 5))
   ]
 
   ask infecteds with [to-remove? = true] [ ; infecteds marked for removal are removed. Not sure I need to do it this way...
@@ -253,37 +253,47 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Go procedure: modify contact
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; If social distancing is applied, a certain proportion of all turtles will reduce their contact chance when a threshold of affected people is reached
+;; If social distancing is applied, a certain proportion of all turtles will reduce their contact chance when a threshold of infected people is reached
+;; Social distancing can be lifted and reapplied based on the current infected population
 ;; Susceptibles will reduce their contacts to the default contact chance multiplied by sd-contact-modifier with some randomness
 ;; The probability that a turtle will follow social distancing is sd-chance
 ;; If social distancing, we only modify contacts of people who have not modified their contacts already
 ;; Infected people will self isolate even before the threshold is reached if infected-isolation? is on, and the effects will be more severe than social distancing
+;; The probability that a turtle will comply with isolation is isolation-chance
 ;; Infected people will reduce their contact chance to a value between 0 and 5 percent
 ;; Susceptibles who follow social distancing are coloured cyan and infecteds who follow infected isolation are coloured pink
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 to modify-contact
 
-  ask turtles with [modified-contact? = false] [
-    if social-distancing? [
-      let been-infected count infecteds + count removeds + count the-dead ;; Total number of people who have been infected
+  let social-distancing-on? false ;; Determines if social distancing will be applied in the current state
 
-      if been-infected > sd-threshold * count turtles [ ;; If the total number of victims is higher than the population threshold
-        let p random 1000 + 1 ;; This will be used in the coin toss to determine whether a turtle will comply with social distancing
+  if social-distancing? [
+    if count infecteds > sd-threshold * count turtles [set social-distancing-on? true]
+  ]
 
-        if sd-chance * 1000 >= p [
-          set contact-chance (default-contact-chance * (sd-contact-modifier - 0.05 + random-float 0.1))
-          if breed = susceptibles [set color cyan]]
-
-        set modified-contact? true
-        ]
-      ]
-    ]
-
-  ask infecteds with [i-modified-contact? = false] [
-    if infected-isolation? [
+  ifelse social-distancing-on? [
+    ask turtles with [modified-contact? = false] [
       let p random 1000 + 1 ;; This will be used in the coin toss to determine whether a turtle will comply with social distancing
 
       if sd-chance * 1000 >= p [
+      set contact-chance (default-contact-chance * (sd-contact-modifier - 0.05 + random-float 0.1))
+      if breed = susceptibles [set color cyan]]
+
+      set modified-contact? true
+      ]
+  ]
+  [ask turtles [ ;; If social distancing is off, all turtles revert to their normal status
+    set contact-chance default-contact-chance
+    if breed = susceptibles [set color green]
+    set modified-contact? false
+    ]
+  ]
+
+  ask infecteds with [i-modified-contact? = false] [
+    if infected-isolation? [
+      let p random 1000 + 1 ;; This will be used in the coin toss to determine whether a turtle will comply with isolation
+
+      if isolation-chance * 1000 >= p [
         set contact-chance (default-contact-chance * (random-float 0.05))
         set color pink
       ]
@@ -393,7 +403,7 @@ initial-inf
 initial-inf
 0
 2500
-10.0
+1.0
 1
 1
 NIL
@@ -405,7 +415,7 @@ INPUTBOX
 79
 71
 max-ticks
-1.0
+10000.0
 1
 0
 Number
@@ -448,23 +458,23 @@ HORIZONTAL
 SLIDER
 88
 54
-260
+280
 87
-countdown
-countdown
+post-infection-countdown
+post-infection-countdown
 1
 100
-100.0
+10.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-218
-197
-390
-230
+276
+148
+448
+181
 sd-threshold
 sd-threshold
 0
@@ -476,10 +486,10 @@ NIL
 HORIZONTAL
 
 SWITCH
-270
-99
-421
-132
+299
+54
+450
+87
 social-distancing?
 social-distancing?
 0
@@ -487,10 +497,10 @@ social-distancing?
 -1000
 
 SWITCH
-272
-54
-428
-87
+301
+11
+457
+44
 infected-isolation?
 infected-isolation?
 0
@@ -543,15 +553,30 @@ NIL
 HORIZONTAL
 
 SLIDER
-238
-153
-410
-186
+284
+98
+456
+131
 sd-contact-modifier
 sd-contact-modifier
 0.05
+0.95
+0.05
+0.01
 1
-0.05
+NIL
+HORIZONTAL
+
+SLIDER
+276
+193
+448
+226
+isolation-chance
+isolation-chance
+0
+1
+1.0
 0.01
 1
 NIL
