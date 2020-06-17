@@ -286,15 +286,16 @@ to modify-contact
     set contact-chance default-contact-chance
     if breed = susceptibles [set color green]
     set modified-contact? false
+    ask infecteds [set i-modified-contact? false] ;; This is to prevent social distancing overriding infected isolation
     ]
   ]
 
-  ask infecteds with [i-modified-contact? = false] [
-    if infected-isolation? [
+   if infected-isolation? [
+    ask infecteds with [i-modified-contact? = false] [
       let p random 1000 + 1 ;; This will be used in the coin toss to determine whether a turtle will comply with isolation
 
       if isolation-chance * 1000 >= p [
-        set contact-chance (default-contact-chance * (random-float 0.05))
+        set contact-chance (default-contact-chance * (ii-contact-modifier - 0.02 + random-float 0.04))
         set color pink
       ]
 
@@ -373,7 +374,7 @@ p-infect-init
 p-infect-init
 0.0
 1.0
-0.4
+1.0
 0.01
 1
 NIL
@@ -403,7 +404,7 @@ initial-inf
 initial-inf
 0
 2500
-1.0
+15.0
 1
 1
 NIL
@@ -497,9 +498,9 @@ social-distancing?
 -1000
 
 SWITCH
-301
+299
 11
-457
+455
 44
 infected-isolation?
 infected-isolation?
@@ -577,6 +578,21 @@ isolation-chance
 0
 1
 1.0
+0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+15
+289
+187
+322
+ii-contact-modifier
+ii-contact-modifier
+0.02
+0.98
+0.02
 0.01
 1
 NIL
