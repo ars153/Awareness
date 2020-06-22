@@ -36,10 +36,13 @@ susceptibles-own [to-become-infected?
 infecteds-own [to-remove?
                to-die?
                time-left
-               i-modified-contact?]
+               i-modified-contact?
+               p-recover]
 
 turtles-own [contact-chance
-             modified-contact?]
+             modified-contact?
+             sex
+             age-group]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup procedures
@@ -68,6 +71,7 @@ end
 ;; Setup procedure: setup-turtles
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; We first create a susceptible on a certain number of patches depending on the population density
+;; Then we assign each turtle their sex and age-group
 ;; Then we convert initial-inf randomly chosen susceptibles to infecteds
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 to setup-turtles
@@ -82,17 +86,46 @@ to setup-turtles
           [set color green
            set contact-chance default-contact-chance
            set to-become-infected? false
-           set modified-contact? false
-           set p-infect p-infect-init]
+           set modified-contact? false]
         ]
 
-   ask n-of initial-inf turtles
-     [
-       set breed infecteds
-       set color red
-       set i-modified-contact? false
-       set time-left (post-infection-countdown - 2 + random (post-infection-countdown / 5)) ;; The infected will have between 80% and 120% of the value post-infection-countdown before they die or recover
-     ]
+  ask n-of (count turtles / 2) turtles [
+    set sex "female"
+    set p-infect (p-infect-init * p-infect-female)
+  ]
+
+  ask turtles with [not (sex = "female")] [
+    set sex "male"
+    set p-infect (p-infect-init * p-infect-male)
+  ]
+
+  ask n-of (count turtles * p-child) turtles [
+    set age-group "child"
+    set p-infect (p-infect-init * p-infect-child)
+  ]
+
+  ask n-of (count turtles * p-elderly) turtles with [not (age-group = "child")] [
+    set age-group "elderly"
+    set p-infect (p-infect-init * p-infect-elderly)
+  ]
+
+  ask turtles with [not (age-group = "child" or age-group = "elderly")] [set age-group "adult"]
+
+  ask n-of initial-inf turtles
+    [
+      set breed infecteds
+      set color red
+      set i-modified-contact? false
+      set time-left (post-infection-countdown - 2 + random (post-infection-countdown / 5)) ;; The infected will have between 80% and 120% of the value post-infection-countdown before they die or recover
+    ]
+
+  ask infecteds with [sex = "female"] [set p-recover (p-recover-init * p-recover-female)]
+
+  ask infecteds with [sex = "male"] [set p-recover (p-recover-init * p-recover-male)]
+
+  ask infecteds with [age-group = "child"] [set p-recover (p-recover * p-recover-child)]
+
+  ask infecteds with [age-group = "elderly"] [set p-recover (p-recover * p-recover-elderly)]
 end
 
 
@@ -247,6 +280,14 @@ to update-breeds
   ]
 
   ask infecteds [set time-left (time-left - 1)] ;; Update time left for infecteds
+
+  ask infecteds with [sex = "female"] [set p-recover (p-recover-init * p-recover-female)]
+
+  ask infecteds with [sex = "male"] [set p-recover (p-recover-init * p-recover-male)]
+
+  ask infecteds with [age-group = "child"] [set p-recover (p-recover * p-recover-child)]
+
+  ask infecteds with [age-group = "elderly"] [set p-recover (p-recover * p-recover-elderly)]
 end
 
 
@@ -305,9 +346,9 @@ to modify-contact
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-490
+639
 10
-1098
+1247
 619
 -1
 -1
@@ -374,7 +415,7 @@ p-infect-init
 p-infect-init
 0.0
 1.0
-1.0
+0.4
 0.01
 1
 NIL
@@ -385,8 +426,8 @@ SLIDER
 145
 227
 178
-p-recover
-p-recover
+p-recover-init
+p-recover-init
 0.0
 1.0
 0.8
@@ -404,7 +445,7 @@ initial-inf
 initial-inf
 0
 2500
-15.0
+10.0
 1
 1
 NIL
@@ -480,7 +521,7 @@ sd-threshold
 sd-threshold
 0
 1
-0.01
+1.0
 0.01
 1
 NIL
@@ -562,7 +603,7 @@ sd-contact-modifier
 sd-contact-modifier
 0.05
 0.95
-0.05
+0.95
 0.01
 1
 NIL
@@ -593,6 +634,156 @@ ii-contact-modifier
 0.02
 0.98
 0.02
+0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+463
+55
+635
+88
+p-child
+p-child
+0
+1
+0.2
+0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+462
+100
+634
+133
+p-elderly
+p-elderly
+0
+1
+0.2
+0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+460
+147
+632
+180
+p-infect-female
+p-infect-female
+0
+1
+1.0
+0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+460
+192
+632
+225
+p-infect-male
+p-infect-male
+0
+1
+1.0
+0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+460
+237
+632
+270
+p-infect-child
+p-infect-child
+0
+1
+0.7
+0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+460
+280
+632
+313
+p-infect-elderly
+p-infect-elderly
+0
+1
+0.4
+0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+460
+321
+632
+354
+p-recover-female
+p-recover-female
+0
+1
+0.0
+0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+459
+361
+631
+394
+p-recover-male
+p-recover-male
+0
+1
+1.0
+0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+466
+433
+638
+466
+p-recover-child
+p-recover-child
+0
+1
+1.0
+0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+466
+472
+638
+505
+p-recover-elderly
+p-recover-elderly
+0
+1
+1.0
 0.01
 1
 NIL
@@ -903,466 +1094,51 @@ NetLogo 6.1.1
 @#$#@#$#@
 @#$#@#$#@
 <experiments>
-  <experiment name="experiment" repetitions="20" runMetricsEveryStep="false">
-    <setup>setup</setup>
-    <go>go</go>
-    <metric>count the-dead</metric>
-    <enumeratedValueSet variable="aware-of-removeds?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="max-ticks">
-      <value value="10000"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="p-infect-init">
-      <value value="0.4"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="initial-inf">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="z-infection-init">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-z-infection?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-p-infect?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="z-aware">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <steppedValueSet variable="p-remove" first="0" step="0.02" last="1"/>
-    <enumeratedValueSet variable="risk-attitude">
-      <value value="0.5"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="aware-of-dead" repetitions="20" runMetricsEveryStep="false">
-    <setup>setup</setup>
-    <go>go</go>
-    <metric>count the-dead</metric>
-    <enumeratedValueSet variable="risk-attitude">
-      <value value="0.5"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="initial-inf">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="z-aware">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <steppedValueSet variable="p-remove" first="0" step="0.02" last="1"/>
-    <enumeratedValueSet variable="countdown">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="aware-of-dead?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="aware-of-removeds?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="z-infection-init">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="max-ticks">
-      <value value="10000"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-p-infect?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-z-infection?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="p-infect-init">
-      <value value="0.4"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="aware-of-removeds" repetitions="20" runMetricsEveryStep="false">
-    <setup>setup</setup>
-    <go>go</go>
-    <metric>count the-dead</metric>
-    <enumeratedValueSet variable="risk-attitude">
-      <value value="0.5"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="initial-inf">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="z-aware">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <steppedValueSet variable="p-remove" first="0" step="0.02" last="1"/>
-    <enumeratedValueSet variable="countdown">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="aware-of-dead?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="aware-of-removeds?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="z-infection-init">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="max-ticks">
-      <value value="10000"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-p-infect?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-z-infection?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="p-infect-init">
-      <value value="0.4"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="aware-of-removeds(r)" repetitions="20" runMetricsEveryStep="false">
-    <setup>setup</setup>
-    <go>go</go>
-    <metric>count removeds</metric>
-    <enumeratedValueSet variable="risk-attitude">
-      <value value="0.5"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="initial-inf">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="z-aware">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <steppedValueSet variable="p-remove" first="0" step="0.02" last="1"/>
-    <enumeratedValueSet variable="countdown">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="aware-of-dead?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="aware-of-removeds?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="z-infection-init">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-z-infection?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="max-ticks">
-      <value value="10000"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-p-infect?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="p-infect-init">
-      <value value="0.4"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="social-distancing-sonly" repetitions="20" runMetricsEveryStep="false">
+  <experiment name="social-distancing" repetitions="20" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <metric>count removeds</metric>
     <metric>count the-dead</metric>
-    <enumeratedValueSet variable="risk-attitude">
-      <value value="0.5"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="initial-inf">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="z-aware">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="p-remove">
-      <value value="0.2"/>
-    </enumeratedValueSet>
-    <steppedValueSet variable="sd-threshold" first="0" step="0.02" last="1"/>
-    <enumeratedValueSet variable="aware-of-removeds?">
-      <value value="true"/>
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="max-ticks">
-      <value value="10000"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-p-infect?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="p-infect-init">
-      <value value="0.4"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="countdown">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="social-distancing?">
-      <value value="true"/>
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="aware-of-dead?">
-      <value value="true"/>
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="z-infection-init">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-z-infection?">
-      <value value="true"/>
-      <value value="false"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="sd-test" repetitions="20" runMetricsEveryStep="false">
-    <setup>setup</setup>
-    <go>go</go>
-    <metric>count the-dead</metric>
-    <metric>count removeds</metric>
-    <enumeratedValueSet variable="risk-attitude">
-      <value value="0.5"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="initial-inf">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="z-aware">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="p-remove">
-      <value value="0.8"/>
-    </enumeratedValueSet>
-    <steppedValueSet variable="sd-threshold" first="0" step="0.02" last="1"/>
-    <enumeratedValueSet variable="aware-of-removeds?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="max-ticks">
-      <value value="10000"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-p-infect?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="p-infect-init">
-      <value value="0.4"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="countdown">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="social-distancing?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="aware-of-dead?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="z-infection-init">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-z-infection?">
-      <value value="true"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="sd-test-2" repetitions="20" sequentialRunOrder="false" runMetricsEveryStep="false">
-    <setup>setup</setup>
-    <go>go</go>
-    <metric>count the-dead</metric>
-    <enumeratedValueSet variable="risk-attitude">
-      <value value="0"/>
-      <value value="0.5"/>
-      <value value="1"/>
-      <value value="2"/>
-      <value value="12"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="initial-inf">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="z-aware">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <steppedValueSet variable="p-remove" first="0" step="0.2" last="1"/>
-    <steppedValueSet variable="sd-threshold" first="0" step="0.2" last="1"/>
-    <enumeratedValueSet variable="aware-of-removeds?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="max-ticks">
-      <value value="10000"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-p-infect?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <steppedValueSet variable="p-infect-init" first="0.1" step="0.3" last="1"/>
-    <enumeratedValueSet variable="countdown">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="social-distancing?">
-      <value value="true"/>
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="aware-of-dead?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="z-infection-init">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-z-infection?">
-      <value value="true"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="isolation" repetitions="20" sequentialRunOrder="false" runMetricsEveryStep="false">
-    <setup>setup</setup>
-    <go>go</go>
-    <metric>count the-dead</metric>
-    <metric>count removeds</metric>
-    <enumeratedValueSet variable="risk-attitude">
-      <value value="0.5"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="initial-inf">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="z-aware">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="p-remove">
-      <value value="0.8"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="sd-threshold">
-      <value value="0.6"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="removed-isolation?">
-      <value value="true"/>
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="aware-of-removeds?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="max-ticks">
-      <value value="10000"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-p-infect?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="p-infect-init">
-      <value value="0.4"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="infected-isolation?">
-      <value value="true"/>
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="countdown">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="social-distancing?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="aware-of-dead?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="z-infection-init">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-z-infection?">
-      <value value="true"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="default-test" repetitions="20" runMetricsEveryStep="false">
-    <setup>setup</setup>
-    <go>go</go>
-    <metric>count removeds</metric>
-    <enumeratedValueSet variable="risk-attitude">
-      <value value="0.5"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="initial-inf">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="z-aware">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="p-remove">
-      <value value="0.8"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="sd-threshold">
-      <value value="0.6"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="removed-isolation?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="aware-of-removeds?">
-      <value value="true"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="max-ticks">
-      <value value="10000"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-p-infect?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="p-infect-init">
-      <value value="0.4"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="infected-isolation?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="countdown">
-      <value value="10"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="social-distancing?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="aware-of-dead?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="z-infection-init">
-      <value value="2"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-z-infection?">
-      <value value="true"/>
-      <value value="false"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="sdtest" repetitions="20" runMetricsEveryStep="false">
-    <setup>setup</setup>
-    <go>go</go>
-    <metric>count turtles with [z-infection = 0]</metric>
-    <enumeratedValueSet variable="risk-attitude">
-      <value value="0.5"/>
-    </enumeratedValueSet>
     <enumeratedValueSet variable="density">
       <value value="1"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="initial-inf">
       <value value="10"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="z-aware">
-      <value value="2"/>
+    <enumeratedValueSet variable="ii-contact-modifier">
+      <value value="0.02"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="p-remove">
-      <value value="0.8"/>
+    <enumeratedValueSet variable="sd-chance">
+      <value value="1"/>
     </enumeratedValueSet>
-    <steppedValueSet variable="sd-chance" first="0.1" step="0.1" last="1"/>
-    <enumeratedValueSet variable="sd-threshold">
-      <value value="0.01"/>
+    <enumeratedValueSet variable="isolation-chance">
+      <value value="1"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="removed-isolation?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="aware-of-removeds?">
-      <value value="true"/>
+    <steppedValueSet variable="sd-threshold" first="0" step="0.1" last="1"/>
+    <enumeratedValueSet variable="post-infection-countdown">
+      <value value="10"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="max-ticks">
       <value value="10000"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-p-infect?">
-      <value value="true"/>
-    </enumeratedValueSet>
     <enumeratedValueSet variable="p-infect-init">
       <value value="0.4"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="contact-chance">
+    <enumeratedValueSet variable="infected-isolation?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="default-contact-chance">
       <value value="1"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="infected-isolation?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="countdown">
-      <value value="10"/>
-    </enumeratedValueSet>
+    <steppedValueSet variable="sd-contact-modifier" first="0.05" step="0.1" last="0.95"/>
     <enumeratedValueSet variable="social-distancing?">
       <value value="true"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="aware-of-dead?">
-      <value value="false"/>
-    </enumeratedValueSet>
     <enumeratedValueSet variable="z-infection-init">
-      <value value="2"/>
+      <value value="1"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="modify-z-infection?">
-      <value value="false"/>
+    <enumeratedValueSet variable="p-recover">
+      <value value="0.8"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
