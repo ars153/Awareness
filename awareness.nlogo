@@ -80,7 +80,7 @@ to setup-turtles
   ask patches
      [set pcolor white]
 
-  ask n-of (density * count patches) patches[
+  ask patches[
 
           sprout-susceptibles 1
           [set color green
@@ -580,21 +580,6 @@ NIL
 HORIZONTAL
 
 SLIDER
-215
-290
-387
-323
-density
-density
-0
-1
-1.0
-0.01
-1
-NIL
-HORIZONTAL
-
-SLIDER
 284
 98
 456
@@ -708,7 +693,7 @@ p-infect-child
 p-infect-child
 0
 1
-0.7
+1.0
 0.01
 1
 NIL
@@ -1138,6 +1123,51 @@ NetLogo 6.1.1
       <value value="1"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="p-recover">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="social-distancing-density" repetitions="20" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <metric>count removeds</metric>
+    <metric>count the-dead</metric>
+    <steppedValueSet variable="density" first="0.1" step="0.1" last="1"/>
+    <enumeratedValueSet variable="initial-inf">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="ii-contact-modifier">
+      <value value="0.02"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="sd-chance">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="isolation-chance">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="sd-threshold" first="0" step="0.2" last="1"/>
+    <enumeratedValueSet variable="post-infection-countdown">
+      <value value="10"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-ticks">
+      <value value="10000"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-infect-init">
+      <value value="0.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="infected-isolation?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="default-contact-chance">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="sd-contact-modifier" first="0.05" step="0.3" last="0.95"/>
+    <enumeratedValueSet variable="social-distancing?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="z-infection-init">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-recover-init">
       <value value="0.8"/>
     </enumeratedValueSet>
   </experiment>
