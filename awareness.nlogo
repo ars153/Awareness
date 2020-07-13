@@ -228,6 +228,7 @@ to infect-susceptibles
         (count infecteds in-radius z-infection-init)         ;; the number of infecteds within the radius z-infection
 
      set infected-contacts (infected-contacts * contact-chance)
+     ask infecteds in-radius z-infection-init [set infected-contacts (infected-contacts * contact-chance)]
 
      let infection-prob 1 - ((1 - p-infect) ^ infected-contacts)   ;; probability of at least one of these contacts causing infection is
                                                                    ;; 1 - the probability that none of them cause infection
@@ -430,7 +431,7 @@ p-recover-init
 p-recover-init
 0.0
 1.0
-0.8
+0.9
 0.01
 1
 NIL
@@ -445,7 +446,7 @@ initial-inf
 initial-inf
 0
 2500
-10.0
+1.0
 1
 1
 NIL
@@ -457,7 +458,7 @@ INPUTBOX
 79
 71
 max-ticks
-10000.0
+9800.0
 1
 0
 Number
@@ -506,7 +507,7 @@ post-infection-countdown
 post-infection-countdown
 1
 100
-10.0
+14.0
 1
 1
 NIL
@@ -521,7 +522,7 @@ sd-threshold
 sd-threshold
 0
 1
-1.0
+0.0
 0.01
 1
 NIL
@@ -558,7 +559,7 @@ default-contact-chance
 default-contact-chance
 0
 1
-1.0
+0.8
 0.1
 1
 NIL
@@ -573,17 +574,17 @@ sd-chance
 sd-chance
 0
 1
-1.0
+0.9
 0.01
 1
 NIL
 HORIZONTAL
 
 SLIDER
-284
-98
-456
-131
+273
+101
+445
+134
 sd-contact-modifier
 sd-contact-modifier
 0.05
@@ -618,7 +619,7 @@ ii-contact-modifier
 ii-contact-modifier
 0.02
 0.98
-0.02
+0.92
 0.01
 1
 NIL
@@ -633,7 +634,7 @@ p-child
 p-child
 0
 1
-0.2
+0.1
 0.01
 1
 NIL
@@ -648,7 +649,7 @@ p-elderly
 p-elderly
 0
 1
-0.2
+0.15
 0.01
 1
 NIL
@@ -708,7 +709,7 @@ p-infect-elderly
 p-infect-elderly
 0
 1
-0.4
+1.0
 0.01
 1
 NIL
@@ -723,7 +724,7 @@ p-recover-female
 p-recover-female
 0
 1
-0.0
+1.0
 0.01
 1
 NIL
@@ -1169,6 +1170,156 @@ NetLogo 6.1.1
     </enumeratedValueSet>
     <enumeratedValueSet variable="p-recover-init">
       <value value="0.8"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="shetland" repetitions="20" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <metric>count the-dead</metric>
+    <metric>count removeds</metric>
+    <metric>count the-dead + count removeds</metric>
+    <enumeratedValueSet variable="initial-inf">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="ii-contact-modifier" first="0.02" step="0.45" last="0.92"/>
+    <enumeratedValueSet variable="p-recover-female">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="sd-chance">
+      <value value="0.9"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="isolation-chance">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="sd-threshold">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="post-infection-countdown">
+      <value value="14"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-recover-male">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-infect-child">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-recover-elderly">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-ticks">
+      <value value="9800"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-infect-init">
+      <value value="0.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-elderly">
+      <value value="0.15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-infect-elderly">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="infected-isolation?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="default-contact-chance">
+      <value value="0.8"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-infect-female">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="sd-contact-modifier" first="0.05" step="0.45" last="0.95"/>
+    <enumeratedValueSet variable="social-distancing?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-recover-child">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="z-infection-init">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-child">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-infect-male">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-recover-init">
+      <value value="0.9"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="shetland-98" repetitions="20" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <metric>count the-dead</metric>
+    <metric>count removeds</metric>
+    <metric>count the-dead + count removeds</metric>
+    <enumeratedValueSet variable="initial-inf">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="ii-contact-modifier" first="0.02" step="0.1" last="0.22"/>
+    <enumeratedValueSet variable="p-recover-female">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="sd-chance">
+      <value value="0.9"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="isolation-chance">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="sd-threshold">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="post-infection-countdown">
+      <value value="14"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-recover-male">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-recover-elderly">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-infect-child">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-ticks">
+      <value value="98"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-elderly">
+      <value value="0.15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-infect-init">
+      <value value="0.4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-infect-elderly">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="infected-isolation?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="default-contact-chance" first="0.6" step="0.1" last="1"/>
+    <enumeratedValueSet variable="p-infect-female">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="social-distancing?">
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-recover-child">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="sd-contact-modifier">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="z-infection-init">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-infect-male">
+      <value value="1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-child">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="p-recover-init">
+      <value value="0.9"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
